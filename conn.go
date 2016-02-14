@@ -98,6 +98,14 @@ type conn struct {
 	scratch   [512]byte
 	txnStatus transactionStatus
 
+	// GPDB specific
+	gpListenerPort 		int32
+	QEWriterHaveInfo	bool
+	QEWriterDtxId		uint32
+	QEWriterCommandId	uint32
+	QEWriterDirty		bool
+	xactStatus			byte
+
 	parameterStatus parameterStatus
 
 	saveMessageType   byte
@@ -848,7 +856,10 @@ func (cn *conn) sendStartupPacket(m *writeBuf) {
 		panic("oops")
 	}
 
-	_, err := cn.c.Write((m.wrap())[1:])
+	buf := m.wrap()
+//	fmt.Printf("%v\n", string(buf[1:]))
+
+	_, err := cn.c.Write(buf[1:])
 	if err != nil {
 		panic(err)
 	}
@@ -1137,7 +1148,7 @@ func isDriverSetting(key string) bool {
 
 func (cn *conn) startup(o values) {
 	w := cn.writeBuf(0)
-	w.int32(196608)
+	w.int32(196608)		// 0x30000
 	// Send the backend the name of the database we want to connect to, and the
 	// user we want to connect as.  Additionally, we send over any run-time
 	// parameters potentially included in the connection string.  If the server
@@ -1166,6 +1177,11 @@ func (cn *conn) startup(o values) {
 			cn.processParameterStatus(r)
 		case 'R':
 			cn.auth(r, o)
+		case 'w':
+			cn.processQEDetails(r)
+		case 'z':
+			cn.processReadyForQueryWithQEWriterInfo(r)
+			return
 		case 'Z':
 			cn.processReadyForQuery(r)
 			return
@@ -1572,6 +1588,17 @@ func (c *conn) processParameterStatus(r *readBuf) {
 	default:
 		// ignore
 	}
+}
+
+func (c *conn) processQEDetails(r *readBuf) {
+	c.gpListenerPort = int32(r.int32())
+}
+
+func (c *conn) processReadyForQueryWithQEWriterInfo(r *readBuf) {
+	c.xactStatus = r.byte()
+	c.QEWriterDtxId = uint32(r.int32())
+	c.QEWriterCommandId = uint32(r.int32())
+	c.QEWriterDirty = (r.byte() == 'T')
 }
 
 func (c *conn) processReadyForQuery(r *readBuf) {
