@@ -233,6 +233,97 @@ func (c *conn) writeBuf(b byte) *writeBuf {
 	}
 }
 
+func RawOpen(name string) (cn *conn, err error) {
+	defer errRecoverNoErrBadConn(&err)
+
+	o := make(values)
+
+	// A number of defaults are applied here, in this order:
+	//
+	// * Very low precedence defaults applied in every situation
+	// * Environment variables
+	// * Explicitly passed connection information
+	o.Set("host", "localhost")
+	o.Set("port", "5432")
+	// N.B.: Extra float digits should be set to 3, but that breaks
+	// Postgres 8.4 and older, where the max is 2.
+	o.Set("extra_float_digits", "2")
+	for k, v := range parseEnviron(os.Environ()) {
+		o.Set(k, v)
+	}
+
+	if strings.HasPrefix(name, "postgres://") || strings.HasPrefix(name, "postgresql://") {
+		name, err = ParseURL(name)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := parseOpts(name, o); err != nil {
+		return nil, err
+	}
+
+	// Use the "fallback" application name if necessary
+	if fallback := o.Get("fallback_application_name"); fallback != "" {
+		if !o.Isset("application_name") {
+			o.Set("application_name", fallback)
+		}
+	}
+
+	// We can't work with any client_encoding other than UTF-8 currently.
+	// However, we have historically allowed the user to set it to UTF-8
+	// explicitly, and there's no reason to break such programs, so allow that.
+	// Note that the "options" setting could also set client_encoding, but
+	// parsing its value is not worth it.  Instead, we always explicitly send
+	// client_encoding as a separate run-time parameter, which should override
+	// anything set in options.
+	if enc := o.Get("client_encoding"); enc != "" && !isUTF8(enc) {
+		return nil, errors.New("client_encoding must be absent or 'UTF8'")
+	}
+	o.Set("client_encoding", "UTF8")
+	// DateStyle needs a similar treatment.
+	if datestyle := o.Get("datestyle"); datestyle != "" {
+		if datestyle != "ISO, MDY" {
+			panic(fmt.Sprintf("setting datestyle must be absent or %v; got %v",
+				"ISO, MDY", datestyle))
+		}
+	} else {
+		o.Set("datestyle", "ISO, MDY")
+	}
+
+	// If a user is not provided by any other means, the last
+	// resort is to use the current operating system provided user
+	// name.
+	if o.Get("user") == "" {
+		u, err := userCurrent()
+		if err != nil {
+			return nil, err
+		} else {
+			o.Set("user", u)
+		}
+	}
+
+	cn = &conn{}
+
+	err = cn.handleDriverSettings(o)
+	if err != nil {
+		return nil, err
+	}
+
+	cn.c, err = dial(defaultDialer{}, o)
+	if err != nil {
+		return nil, err
+	}
+	cn.ssl(o)
+	cn.buf = bufio.NewReader(cn.c)
+	cn.startup(o)
+	// reset the deadline, in case one was set (see dial)
+	if timeout := o.Get("connect_timeout"); timeout != "" && timeout != "0" {
+		err = cn.c.SetDeadline(time.Time{})
+	}
+	return cn, err
+}
+
 func Open(name string) (_ driver.Conn, err error) {
 	return DialOpen(defaultDialer{}, name)
 }
@@ -617,6 +708,16 @@ func (cn *conn) simpleExec(q string) (res driver.Result, commandTag string, err 
 			errorf("unknown response for simple query: %q", t)
 		}
 	}
+}
+
+func (cn *conn) RawQuery(q string) (c net.Conn, err error) {
+	defer cn.errRecover(&err)
+
+	b := cn.writeBuf('Q')
+	b.string(q)
+	cn.send(b)
+
+	return cn.c, nil
 }
 
 func (cn *conn) simpleQuery(q string) (res *rows, err error) {
