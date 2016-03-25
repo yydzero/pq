@@ -125,6 +125,10 @@ type conn struct {
 	binaryParameters bool
 }
 
+type Conn struct {
+	conn
+}
+
 // Handle driver-side settings in parsed connection string.
 func (c *conn) handleDriverSettings(o values) (err error) {
 	boolSetting := func(key string, val *bool) error {
@@ -233,7 +237,7 @@ func (c *conn) writeBuf(b byte) *writeBuf {
 	}
 }
 
-func RawOpen(name string) (cn *conn, err error) {
+func RawOpen(name string) (c *Conn, err error) {
 	defer errRecoverNoErrBadConn(&err)
 
 	o := make(values)
@@ -303,7 +307,7 @@ func RawOpen(name string) (cn *conn, err error) {
 		}
 	}
 
-	cn = &conn{}
+	cn := conn{}
 
 	err = cn.handleDriverSettings(o)
 	if err != nil {
@@ -321,7 +325,9 @@ func RawOpen(name string) (cn *conn, err error) {
 	if timeout := o.Get("connect_timeout"); timeout != "" && timeout != "0" {
 		err = cn.c.SetDeadline(time.Time{})
 	}
-	return cn, err
+
+	c = &Conn{cn}
+	return c, err
 }
 
 func Open(name string) (_ driver.Conn, err error) {
@@ -710,7 +716,7 @@ func (cn *conn) simpleExec(q string) (res driver.Result, commandTag string, err 
 	}
 }
 
-func (cn *conn) RawQuery(q string) (c net.Conn, err error) {
+func (cn *Conn) RawQuery(q string) (c net.Conn, err error) {
 	defer cn.errRecover(&err)
 
 	b := cn.writeBuf('Q')
