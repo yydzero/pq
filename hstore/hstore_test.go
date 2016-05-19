@@ -1,7 +1,7 @@
 package hstore
 
 import (
-	"database/sql"
+	"github.com/yydzero/database/sql"
 	"os"
 	"testing"
 

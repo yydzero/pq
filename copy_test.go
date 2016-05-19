@@ -2,8 +2,8 @@ package pq
 
 import (
 	"bytes"
-	"database/sql"
-	"database/sql/driver"
+	"github.com/yydzero/database/sql"
+	"github.com/yydzero/database/sql/driver"
 	"strings"
 	"testing"
 )

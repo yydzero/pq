@@ -5,7 +5,7 @@ package pq
 import (
 	_ "crypto/sha256"
 	"crypto/x509"
-	"database/sql"
+	"github.com/yydzero/database/sql"
 	"fmt"
 	"os"
 	"path/filepath"

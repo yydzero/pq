@@ -2,7 +2,7 @@ package pq
 
 import (
 	"bytes"
-	"database/sql"
+	"github.com/yydzero/database/sql"
 	"fmt"
 	"strings"
 	"testing"

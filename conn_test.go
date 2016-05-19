@@ -1,8 +1,8 @@
 package pq
 
 import (
-	"database/sql"
-	"database/sql/driver"
+	"github.com/yydzero/database/sql"
+	"github.com/yydzero/database/sql/driver"
 	"fmt"
 	"io"
 	"os"

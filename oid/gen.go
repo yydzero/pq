@@ -5,7 +5,7 @@
 package main
 
 import (
-	"database/sql"
+	"github.com/yydzero/database/sql"
 	"fmt"
 	"log"
 	"os"

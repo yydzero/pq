@@ -2,7 +2,7 @@ package pq
 
 import (
 	"bytes"
-	"database/sql/driver"
+	"github.com/yydzero/database/sql/driver"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"

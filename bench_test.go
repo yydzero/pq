@@ -5,8 +5,8 @@ package pq
 import (
 	"bufio"
 	"bytes"
-	"database/sql"
-	"database/sql/driver"
+	"github.com/yydzero/database/sql"
+	"github.com/yydzero/database/sql/driver"
 	"io"
 	"math/rand"
 	"net"

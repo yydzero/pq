@@ -1,8 +1,8 @@
 package hstore
 
 import (
-	"database/sql"
-	"database/sql/driver"
+	"github.com/yydzero/database/sql"
+	"github.com/yydzero/database/sql/driver"
 	"strings"
 )
 

@@ -1,7 +1,7 @@
 package pq
 
 import (
-	"database/sql/driver"
+	"github.com/yydzero/database/sql/driver"
 	"encoding/binary"
 	"errors"
 	"fmt"
