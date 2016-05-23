@@ -22,7 +22,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/lib/pq/oid"
+	"github.com/yydzero/pq/oid"
 )
 
 // Common error types
@@ -1531,6 +1531,14 @@ func (rs *rows) Close() error {
 			return err
 		}
 	}
+}
+
+type ColumnTyper interface {
+	Types() []oid.Oid
+}
+
+func (rs *rows) Types() []oid.Oid {
+	return rs.colTyps
 }
 
 func (rs *rows) Columns() []string {
