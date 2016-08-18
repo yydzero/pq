@@ -1356,6 +1356,23 @@ type stmt struct {
 	closed     bool
 }
 
+type StmtMeta interface {
+	//GetName() string
+	GetColNames() []string
+	//GetColFmts() []int
+	//GetColFmtData() []byte
+	GetColTyps() []oid.Oid
+	//GetParamTyps() []oid.Oid
+}
+
+func (st *stmt) GetColNames() []string {
+	return st.colNames
+}
+
+func (st *stmt) GetColTyps() []oid.Oid {
+	return st.colTyps
+}
+
 func (st *stmt) Close() (err error) {
 	if st.closed {
 		return nil
